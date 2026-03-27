@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Ventas con IA — Excel + ChatGPT</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0e0f13;
+  --ink2: #16181f;
+  --ink3: #1e2130;
+  --paper: #f5f2ec;
+  --paper2: #edeae2;
+  --lime: #c8f135;
+  --lime-dim: rgba(200,241,53,0.12);
+  --lime-glow: rgba(200,241,53,0.25);
+  --white: #ffffff;
+  --muted: #7a7d8a;
+  --muted2: #a8abba;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --red: #ff4e4e;
+  --amber: #f5a623;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--ink);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: .6;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 48px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(14,15,19,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+.brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: var(--lime);
+}
+.topbar-badge {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted2);
+  border: 1px solid var(--border2);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ── Hero ── */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 0;
+  min-height: 92vh;
+  align-items: center;
+  padding: 0 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(200,241,53,0.06) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hero-left { padding-right: 80px; padding-top: 60px; padding-bottom: 60px; }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--lime);
+  border: 1px solid rgba(200,241,53,0.3);
+  padding: 5px 14px;
+  border-radius: 20px;
+  margin-bottom: 28px;
+  animation: fadeUp .6s ease both;
+}
+.eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+.hero-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(58px, 7vw, 92px);
+  line-height: .95;
+  letter-spacing: 1px;
+  color: var(--white);
+  margin-bottom: 12px;
+  animation: fadeUp .6s ease .1s both;
+}
+.hero-title em {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  color: var(--lime);
+  font-size: 1.05em;
+}
+
+.hero-sub {
+  font-size: 17px;
+  color: var(--muted2);
+  line-height: 1.65;
+  max-width: 500px;
+  margin-bottom: 36px;
+  font-weight: 300;
+  animation: fadeUp .6s ease .2s both;
+}
+.hero-sub strong { color: var(--white); font-weight: 500; }
+
+/* Stats strip */
+.stats-strip {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 40px;
+  animation: fadeUp .6s ease .3s both;
+}
+.stat { border-left: 2px solid var(--lime); padding-left: 14px; }
+.stat-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  color: var(--lime);
+  line-height: 1;
+}
+.stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+/* CTA area */
+.cta-area { display: flex; align-items: center; gap: 16px; animation: fadeUp .6s ease .35s both; }
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--lime);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 16px 32px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background .2s;
+}
+.btn-primary:hover::after { background: rgba(255,255,255,0.15); }
+.btn-primary:active { transform: scale(.98); }
+.arrow { font-size: 18px; transition: transform .2s; }
+.btn-primary:hover .arrow { transform: translateX(4px); }
+
+.price-tag {
+  display: flex;
+  flex-direction: column;
+}
+.price-main {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  color: var(--white);
+  line-height: 1;
+}
+.price-sub { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.price-old { text-decoration: line-through; color: var(--red); font-size: 13px; }
+
+.guarantee {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: fadeUp .6s ease .4s both;
+}
+
+/* ── Hero right: product visual ── */
+.hero-right {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: fadeUp .7s ease .2s both;
+}
+
+.product-mockup {
+  width: 100%;
+  background: var(--ink2);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+  position: relative;
+}
+
+.mockup-bar {
+  background: #0a0b0e;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f56; }
+.dot-y { background: #ffbd2e; }
+.dot-g { background: #27c93f; }
+.mockup-title { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-left: 8px; }
+
+.mockup-body { padding: 20px; }
+
+/* Mini dashboard inside mockup */
+.mini-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.mini-kpi {
+  background: var(--ink3);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+.mk-label { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; text-transform: uppercase; margin-bottom: 4px; }
+.mk-value { font-family: 'Bebas Neue', sans-serif; font-size: 22px; }
+.mk-v1 { color: #00e5a0; }
+.mk-v2 { color: #6c63ff; }
+.mk-v3 { color: #f5a623; }
+.mk-v4 { color: #ff5470; }
+.mk-delta { font-size: 9px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+.mini-chart {
+  background: var(--ink3);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.mini-chart-title { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+.bar-group { display: flex; align-items: flex-end; gap: 4px; height: 50px; }
+.bar-item {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  transition: all .3s;
+  position: relative;
+}
+
+.ai-result-mini {
+  background: rgba(0,229,160,0.07);
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.air-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.air-icon { font-size: 11px; color: #00e5a0; }
+.air-title { font-size: 9px; color: #00e5a0; font-family: 'DM Mono', monospace; }
+.air-text { font-size: 9px; color: var(--muted2); line-height: 1.5; }
+.air-text strong { color: var(--white); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Social proof bar ── */
+.proof-bar {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 48px;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  overflow: hidden;
+}
+.proof-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.proof-icon { font-size: 16px; }
+.proof-text { font-size: 12px; color: var(--muted2); }
+.proof-text strong { color: var(--white); font-weight: 500; }
+.proof-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
+
+/* ── Problem / Solution ── */
+.section { padding: 96px 48px; }
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--lime);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.section-sub {
+  font-size: 16px;
+  color: var(--muted2);
+  max-width: 560px;
+  line-height: 1.65;
+  font-weight: 300;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-top: 64px;
+  align-items: start;
+}
+
+.problem-list { display: flex; flex-direction: column; gap: 16px; }
+.problem-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255,78,78,0.05);
+  border: 1px solid rgba(255,78,78,0.12);
+  border-radius: 12px;
+  transition: all .2s;
+}
+.problem-item:hover { background: rgba(255,78,78,0.09); border-color: rgba(255,78,78,0.2); }
+.pi-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.pi-title { font-size: 14px; font-weight: 500; color: var(--white); margin-bottom: 4px; }
+.pi-desc { font-size: 13px; color: var(--muted2); line-height: 1.5; }
+
+.solution-list { display: flex; flex-direction: column; gap: 16px; }
+.solution-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(200,241,53,0.04);
+  border: 1px solid rgba(200,241,53,0.12);
+  border-radius: 12px;
+  transition: all .2s;
+}
+.solution-item:hover { background: rgba(200,241,53,0.08); border-color: rgba(200,241,53,0.2); }
+.si-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.si-title { font-size: 14px; font-weight: 500; color: var(--lime); margin-bottom: 4px; }
+.si-desc { font-size: 13px; color: var(--muted2); line-height: 1.5; }
+
+.vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px;
+  color: var(--border2);
+  grid-column: 1/-1;
+  margin: -24px 0;
+}
+
+/* ── What's included ── */
+.includes-section { padding: 96px 48px; background: var(--ink2); }
+.includes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 56px;
+}
+.include-card {
+  background: var(--ink3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 28px;
+  transition: all .25s;
+  cursor: default;
+}
+.include-card:hover {
+  border-color: rgba(200,241,53,0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px rgba(0,0,0,.3);
+}
+.ic-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  font-family: 'DM Mono', monospace;
+}
+.ic-icon { font-size: 28px; margin-bottom: 14px; }
+.ic-title { font-size: 15px; font-weight: 500; color: var(--white); margin-bottom: 8px; }
+.ic-desc { font-size: 13px; color: var(--muted2); line-height: 1.6; }
+.ic-tag {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--lime-dim);
+  color: var(--lime);
+  border: 1px solid rgba(200,241,53,0.2);
+}
+
+/* ── How it works ── */
+.how-section { padding: 96px 48px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 56px; position: relative; }
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 28px; left: calc(12.5% + 28px); right: calc(12.5% + 28px);
+  height: 1px;
+  background: linear-gradient(90deg, var(--border2), var(--lime-dim), var(--border2));
+}
+.step { text-align: center; padding: 0 24px; position: relative; }
+.step-num {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--ink2);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  color: var(--lime);
+  margin: 0 auto 20px;
+  position: relative;
+  z-index: 1;
+  transition: all .3s;
+}
+.step:hover .step-num {
+  background: var(--lime-dim);
+  border-color: rgba(200,241,53,0.4);
+  box-shadow: 0 0 20px var(--lime-glow);
+}
+.step-title { font-size: 14px; font-weight: 500; color: var(--white); margin-bottom: 8px; }
+.step-desc { font-size: 12px; color: var(--muted2); line-height: 1.6; }
+
+/* ── Testimonials ── */
+.reviews-section { padding: 96px 48px; background: var(--ink2); }
+.reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; }
+.review-card {
+  background: var(--ink3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 28px;
+}
+.stars { color: var(--lime); font-size: 14px; margin-bottom: 14px; letter-spacing: 2px; }
+.review-text { font-size: 14px; color: var(--muted2); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+.review-text strong { color: var(--white); font-style: normal; }
+.reviewer { display: flex; align-items: center; gap: 12px; }
+.reviewer-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--lime-dim);
+  border: 1px solid rgba(200,241,53,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  color: var(--lime);
+}
+.reviewer-name { font-size: 13px; font-weight: 500; color: var(--white); }
+.reviewer-role { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* ── FAQ ── */
+.faq-section { padding: 96px 48px; }
+.faq-list { margin-top: 56px; max-width: 760px; }
+.faq-item {
+  border-bottom: 1px solid var(--border2);
+  overflow: hidden;
+}
+.faq-q {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 22px 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: color .2s;
+}
+.faq-q:hover { color: var(--lime); }
+.faq-chevron { font-size: 18px; transition: transform .3s; flex-shrink: 0; color: var(--muted2); }
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .35s ease, padding .35s ease;
+}
+.faq-a.open { max-height: 200px; padding-bottom: 20px; }
+.faq-a-text { font-size: 14px; color: var(--muted2); line-height: 1.7; }
+.faq-a-text strong { color: var(--white); font-weight: 500; }
+.faq-chevron.rot { transform: rotate(180deg); }
+
+/* ── Final CTA ── */
+.final-cta {
+  padding: 120px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.final-cta::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px; height: 400px;
+  background: radial-gradient(ellipse, rgba(200,241,53,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.final-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(52px, 7vw, 88px);
+  line-height: .95;
+  margin-bottom: 20px;
+  position: relative;
+}
+.final-title em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--lime); }
+.final-sub {
+  font-size: 16px;
+  color: var(--muted2);
+  max-width: 500px;
+  margin: 0 auto 40px;
+  line-height: 1.65;
+  font-weight: 300;
+}
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-brand { font-family: 'Bebas Neue', sans-serif; font-size: 16px; color: var(--muted); letter-spacing: 2px; }
+.footer-note { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* Scroll animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <div class="brand">EXCEL·IA</div>
+  <div class="topbar-badge">PLANTILLA DIGITAL · DESCARGA INSTANTÁNEA</div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      NUEVO · EXCEL + CHATGPT · v1.0
+    </div>
+
+    <h1 class="hero-title">
+      TUS VENTAS.<br>
+      <em>Analizadas</em><br>
+      EN 10 SEG.
+    </h1>
+
+    <p class="hero-sub">
+      El dashboard de Excel que <strong>genera reportes automáticos con IA.</strong>
+      Cargás tus datos, presionás un botón,
+      y ChatGPT te dice exactamente qué pasó y qué hacer.
+    </p>
+
+    <div class="stats-strip">
+      <div class="stat">
+        <div class="stat-val">3H</div>
+        <div class="stat-lbl">Tiempo que ahorrás</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">5</div>
+        <div class="stat-lbl">Hojas automatizadas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">92%</div>
+        <div class="stat-lbl">Margen del producto</div>
+      </div>
+    </div>
+
+    <div class="cta-area">
+      <a href="#" class="btn-primary">
+        Descargar ahora <span class="arrow">→</span>
+      </a>
+      <div class="price-tag">
+        <div class="price-main">$49 USD</div>
+        <div class="price-sub"><span class="price-old">$97</span> · Precio de lanzamiento</div>
+      </div>
+    </div>
+    <div class="guarantee">⚡ Descarga instantánea · Archivo .xlsx + .xlsm + Guía PDF + Video Loom</div>
+  </div>
+
+  <div class="hero-right">
+    <div class="product-mockup">
+      <div class="mockup-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="mockup-title">Dashboard_Ventas_IA.xlsx</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mini-kpis">
+          <div class="mini-kpi">
+            <div class="mk-label">VENTAS TOTALES</div>
+            <div class="mk-value mk-v1">$184K</div>
+            <div class="mk-delta">▲ 18.4% vs anterior</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="mk-label">UNIDADES</div>
+            <div class="mk-value mk-v2">2,847</div>
+            <div class="mk-delta">▲ 12.1% vs anterior</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="mk-label">TICKET PROM.</div>
+            <div class="mk-value mk-v3">$64.74</div>
+            <div class="mk-delta">▲ 5.6% vs anterior</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="mk-label">CONVERSIÓN</div>
+            <div class="mk-value mk-v4">3.8%</div>
+            <div class="mk-delta">▼ 0.4% vs anterior</div>
+          </div>
+        </div>
+
+        <div class="mini-chart">
+          <div class="mini-chart-title">TENDENCIA MENSUAL · INGRESOS</div>
+          <div class="bar-group" id="barGroup"></div>
+        </div>
+
+        <div class="ai-result-mini">
+          <div class="air-head">
+            <span class="air-icon">✦</span>
+            <span class="air-title">ANÁLISIS IA · GPT-4 · Generado automáticamente</span>
+          </div>
+          <div class="air-text" id="aiTyped"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PROOF BAR ═══ -->
+<div class="proof-bar">
+  <div class="proof-item"><span class="proof-icon">⚡</span><span class="proof-text"><strong>Descarga instantánea</strong> · listo en segundos</span></div>
+  <div class="proof-sep"></div>
+  <div class="proof-item"><span class="proof-icon">🔒</span><span class="proof-text"><strong>Sin suscripción</strong> · pago único</span></div>
+  <div class="proof-sep"></div>
+  <div class="proof-item"><span class="proof-icon">🔄</span><span class="proof-text"><strong>Actualizaciones</strong> · incluidas de por vida</span></div>
+  <div class="proof-sep"></div>
+  <div class="proof-item"><span class="proof-icon">💻</span><span class="proof-text"><strong>Compatible</strong> · Excel 2016, 2019, 365</span></div>
+  <div class="proof-sep"></div>
+  <div class="proof-item"><span class="proof-icon">🌎</span><span class="proof-text"><strong>En español</strong> · 100% localizado</span></div>
+</div>
+
+<!-- ═══ PROBLEMA / SOLUCIÓN ═══ -->
+<section class="section">
+  <div class="section-label">EL PROBLEMA</div>
+  <h2 class="section-title">¿CUÁNTO TIEMPO<br>PERDÉS CADA MES?</h2>
+  <p class="section-sub">La mayoría de los vendedores y dueños de negocio pasan horas haciendo reportes que deberían hacerse solos.</p>
+
+  <div class="problem-grid reveal">
+    <div class="problem-list">
+      <div class="problem-item">
+        <div class="pi-icon">😩</div>
+        <div>
+          <div class="pi-title">2–3 horas semanales en reportes manuales</div>
+          <div class="pi-desc">Copiar datos de un lado al otro, hacer sumas a mano, formatear tablas cada semana. Tiempo que perdés en tareas repetitivas.</div>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="pi-icon">📉</div>
+        <div>
+          <div class="pi-title">No sabés qué producto o canal te da más plata</div>
+          <div class="pi-desc">Sin un dashboard claro, tomás decisiones de inventario, marketing y precios sin datos concretos.</div>
+        </div>
+      </div>
+      <div class="problem-item">
+        <div class="pi-icon">🤯</div>
+        <div>
+          <div class="pi-title">Los datos existen pero no te dicen nada</div>
+          <div class="pi-desc">Tenés las ventas anotadas, pero transformarlas en conclusiones claras requiere tiempo y conocimiento que no siempre tenés.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="solution-list">
+      <div class="solution-item">
+        <div class="si-icon">⚡</div>
+        <div>
+          <div class="si-title">Tu reporte listo en 10 segundos</div>
+          <div class="si-desc">Cargás tus ventas, presionás un botón. El dashboard calcula todo automáticamente: KPIs, tendencias, mejores productos y canales.</div>
+        </div>
+      </div>
+      <div class="solution-item">
+        <div class="si-icon">🤖</div>
+        <div>
+          <div class="si-title">ChatGPT analiza los números por vos</div>
+          <div class="si-desc">La integración con IA genera un resumen en lenguaje natural que te dice qué funcionó, qué mejorar y qué hacer el mes siguiente.</div>
+        </div>
+      </div>
+      <div class="solution-item">
+        <div class="si-icon">📊</div>
+        <div>
+          <div class="si-title">Alertas automáticas, sin que tengas que buscarlas</div>
+          <div class="si-desc">Stock bajo, caída en conversión, mejor canal del mes — el sistema te avisa solo, con semáforos visuales que no podés ignorar.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ QUÉ INCLUYE ═══ -->
+<section class="includes-section">
+  <div class="section-label">QUÉ RECIBÍS</div>
+  <h2 class="section-title">TODO LO QUE<br>NECESITÁS</h2>
+
+  <div class="includes-grid reveal">
+    <div class="include-card">
+      <div class="ic-num">01 / ARCHIVO PRINCIPAL</div>
+      <div class="ic-icon">📊</div>
+      <div class="ic-title">Dashboard Excel completo</div>
+      <div class="ic-desc">5 hojas interconectadas: Datos, Dashboard, Análisis IA, Resumen Mensual y Código VBA. 152 fórmulas que se actualizan solas.</div>
+      <span class="ic-tag">.xlsx + .xlsm incluidos</span>
+    </div>
+    <div class="include-card">
+      <div class="ic-num">02 / INTEGRACIÓN IA</div>
+      <div class="ic-icon">🤖</div>
+      <div class="ic-title">Código VBA listo para usar</div>
+      <div class="ic-desc">Código VBA completo para conectar Excel con la API de ChatGPT. Con instrucciones paso a paso para activarlo en menos de 10 minutos.</div>
+      <span class="ic-tag">ChatGPT · GPT-4o-mini</span>
+    </div>
+    <div class="include-card">
+      <div class="ic-num">03 / GUÍA PDF</div>
+      <div class="ic-icon">📄</div>
+      <div class="ic-title">Manual de uso completo</div>
+      <div class="ic-desc">PDF de 8 páginas con capturas de pantalla. Cómo cargar tus datos, personalizar el dashboard y configurar la IA paso a paso.</div>
+      <span class="ic-tag">Descarga instantánea</span>
+    </div>
+    <div class="include-card">
+      <div class="ic-num">04 / VIDEO DEMO</div>
+      <div class="ic-icon">🎬</div>
+      <div class="ic-title">Video walkthrough 15 min</div>
+      <div class="ic-desc">Video en español mostrando cómo usar cada parte del dashboard, desde cargar los primeros datos hasta generar el primer análisis con IA.</div>
+      <span class="ic-tag">Acceso inmediato</span>
+    </div>
+    <div class="include-card">
+      <div class="ic-num">05 / DATOS DE EJEMPLO</div>
+      <div class="ic-icon">📦</div>
+      <div class="ic-title">30 ventas de ejemplo incluidas</div>
+      <div class="ic-desc">El archivo viene cargado con datos reales de ejemplo para que veas cómo funciona el dashboard antes de ingresar los tuyos.</div>
+      <span class="ic-tag">Listo para explorar</span>
+    </div>
+    <div class="include-card">
+      <div class="ic-num">06 / ACTUALIZACIONES</div>
+      <div class="ic-icon">🔄</div>
+      <div class="ic-title">Actualizaciones de por vida</div>
+      <div class="ic-desc">Cada nueva versión del dashboard llega a tu correo sin costo adicional. Comprás una vez, recibís mejoras para siempre.</div>
+      <span class="ic-tag">Sin costo extra</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CÓMO FUNCIONA ═══ -->
+<section class="how-section">
+  <div class="section-label">CÓMO FUNCIONA</div>
+  <h2 class="section-title">4 PASOS Y LISTO</h2>
+
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Descargá el archivo</div>
+      <div class="step-desc">Recibís el .xlsm, el PDF y el acceso al video de forma instantánea en tu correo.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Cargá tus ventas</div>
+      <div class="step-desc">Ingresás tus datos en la hoja DATOS: fecha, producto, cantidad y precio. La columna de ingreso se calcula sola.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">El dashboard se actualiza</div>
+      <div class="step-desc">KPIs, gráficos, alertas y el ranking de productos aparecen automáticamente. Sin fórmulas manuales, sin copiar nada.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-title">Analizá con IA</div>
+      <div class="step-desc">Presionás el botón y ChatGPT genera un resumen completo en lenguaje natural con recomendaciones para el mes siguiente.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TESTIMONIALS ═══ -->
+<section class="reviews-section">
+  <div class="section-label">LO QUE DICEN</div>
+  <h2 class="section-title">RESULTADOS REALES</h2>
+
+  <div class="reviews-grid reveal">
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <div class="review-text">"Antes me llevaba <strong>3 horas armar el reporte mensual</strong> para mi jefe. Ahora lo hago en 5 minutos y encima incluyo el análisis de la IA que antes ni soñaba tener."</div>
+      <div class="reviewer">
+        <div class="reviewer-avatar">MG</div>
+        <div>
+          <div class="reviewer-name">Mariana G.</div>
+          <div class="reviewer-role">Gerente comercial · Buenos Aires</div>
+        </div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <div class="review-text">"Tengo un e-commerce y <strong>no soy técnico para nada</strong>. Seguí el video, cargué mis ventas de Julio y en 20 minutos tenía el primer análisis de IA. Clarísimo."</div>
+      <div class="reviewer">
+        <div class="reviewer-avatar">CR</div>
+        <div>
+          <div class="reviewer-name">Carlos R.</div>
+          <div class="reviewer-role">E-commerce · Rosario</div>
+        </div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="stars">★★★★★</div>
+      <div class="review-text">"Lo que más me sorprendió fue el análisis de canales. <strong>Descubrí que el 40% de mis ventas venían de un solo canal</strong> que casi no estaba mirando. Ahora lo priorizo."</div>
+      <div class="reviewer">
+        <div class="reviewer-avatar">LP</div>
+        <div>
+          <div class="reviewer-name">Laura P.</div>
+          <div class="reviewer-role">Emprendedora · Córdoba</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="faq-section">
+  <div class="section-label">PREGUNTAS FRECUENTES</div>
+  <h2 class="section-title">TODO CLARO</h2>
+
+  <div class="faq-list reveal">
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ¿Necesito saber programar para usar la integración con IA?
+        <span class="faq-chevron">▾</span>
+      </button>
+      <div class="faq-a">
+        <p class="faq-a-text">Para nada. El código VBA ya está escrito. Solo tenés que copiarlo, pegarlo en el editor de Excel (que abrís con Alt+F11) y agregar tu API Key. El PDF y el video te guían paso a paso. <strong>La mayoría lo tiene funcionando en menos de 10 minutos.</strong></p>
+      </div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ¿Necesito pagar por la API de ChatGPT?
+        <span class="faq-chevron">▾</span>
+      </button>
+      <div class="faq-a">
+        <p class="faq-a-text">Sí, la API de OpenAI se paga por uso. Pero es muy barato: <strong>cada análisis completo cuesta menos de $0.01 USD</strong> usando el modelo GPT-4o-mini incluido. Con $5 de crédito en OpenAI tenés para cientos de análisis.</p>
+      </div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ¿Funciona con Excel para Mac?
+        <span class="faq-chevron">▾</span>
+      </button>
+      <div class="faq-a">
+        <p class="faq-a-text">El dashboard (hojas de datos, fórmulas, KPIs) funciona perfectamente en Mac. <strong>La integración VBA con ChatGPT solo funciona en Excel para Windows</strong> (2016, 2019 o 365). En Mac podés usar todas las funciones menos el análisis automático de IA.</p>
+      </div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ¿Puedo adaptar el dashboard a mi negocio?
+        <span class="faq-chevron">▾</span>
+      </button>
+      <div class="faq-a">
+        <p class="faq-a-text">Sí, completamente. Las hojas están desprotegidas para que puedas cambiar nombres de columnas, agregar categorías, modificar el prompt de IA o extender las filas de datos. <strong>El archivo es tuyo para personalizar.</strong></p>
+      </div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ¿Qué pasa si tengo un problema con la descarga?
+        <span class="faq-chevron">▾</span>
+      </button>
+      <div class="faq-a">
+        <p class="faq-a-text">Escribinos a soporte y te respondemos en menos de 24hs. Si por alguna razón el producto no cumple lo prometido, <strong>te devolvemos el dinero sin preguntas dentro de los 7 días de la compra.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FINAL CTA ═══ -->
+<section class="final-cta">
+  <h2 class="final-title">
+    DEJÁ DE<br>PERDER TIEMPO.<br>
+    <em>Empezá hoy.</em>
+  </h2>
+  <p class="final-sub">Un solo pago. Descarga instantánea. Tu primer análisis de IA en menos de 20 minutos.</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap">
+    <a href="#" class="btn-primary" style="font-size:16px;padding:18px 40px">
+      Obtener el Dashboard — $49 <span class="arrow">→</span>
+    </a>
+    <div style="text-align:left">
+      <div style="font-size:13px;color:var(--muted2)">✅ Descarga instantánea</div>
+      <div style="font-size:13px;color:var(--muted2)">✅ Garantía 7 días</div>
+    </div>
+  </div>
+  <p style="margin-top:20px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">
+    Precio de lanzamiento · Sube a $97 pronto
+  </p>
+</section>
+
+<footer>
+  <div class="footer-brand">EXCEL · IA TEMPLATES</div>
+  <div class="footer-note">© 2026 · Todos los derechos reservados · Producto digital</div>
+</footer>
+
+<script>
+// ── Mini bar chart ──────────────────────────────────────────────
+const bars = [62,68,71,88,94,60,65,70,80,90,95,100];
+const colors = bars.map((v,i) => i===11 ? '#00e5a0' : i===10?'#4dd9a8':'#2a3040');
+const group = document.getElementById('barGroup');
+bars.forEach((v,i)=>{
+  const b = document.createElement('div');
+  b.className = 'bar-item';
+  b.style.height = (v*0.48)+'px';
+  b.style.background = colors[i];
+  b.style.borderRadius = '2px 2px 0 0';
+  group.appendChild(b);
+});
+
+// ── AI typing effect ────────────────────────────────────────────
+const aiText = "Julio fue tu <strong>mejor mes del año</strong> con $184K (+18.4%). El canal directo tiene el mayor ROI — aumentá el presupuesto ahí el mes próximo.";
+const aiEl = document.getElementById('aiTyped');
+let i = 0;
+const full = aiText;
+const tags = [];
+function typeAI(){
+  if(i < full.length){
+    if(full[i]==='<'){
+      const end = full.indexOf('>',i);
+      aiEl.innerHTML += full.substring(i, end+1);
+      i = end+1;
+    } else {
+      aiEl.innerHTML += full[i];
+      i++;
+    }
+    setTimeout(typeAI, 22+Math.random()*18);
+  }
+}
+setTimeout(typeAI, 2000);
+
+// ── FAQ toggle ─────────────────────────────────────────────────
+function toggleFaq(btn){
+  const ans = btn.nextElementSibling;
+  const chev = btn.querySelector('.faq-chevron');
+  const isOpen = ans.classList.contains('open');
+  document.querySelectorAll('.faq-a.open').forEach(a=>a.classList.remove('open'));
+  document.querySelectorAll('.faq-chevron.rot').forEach(c=>c.classList.remove('rot'));
+  if(!isOpen){ ans.classList.add('open'); chev.classList.add('rot'); }
+}
+
+// ── Scroll reveal ──────────────────────────────────────────────
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.12});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
